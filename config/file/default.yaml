@@ -1,0 +1,26 @@
+mysql:
+  max_idle_conn: 10
+  max_open_conn: 20
+  log_mode: False
+
+redis:
+  key_pref: testProject
+  max_open_conn: 100
+  max_idle_conn: 100
+  ssl: false
+
+
+# mq producer consumer
+user-service-producer:
+  exchangeName: testproject.service
+  durable: true
+  kind: fanout
+user-service-consumer:
+  exchangeName: testproject.service
+  queueName: social
+  queueDurable: true # chijiuhua
+  exchangeDurable: true
+  kind: fanout
+  parallel: 4
+  autoAck: false
+  prefetch: 1

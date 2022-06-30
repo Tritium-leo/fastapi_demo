@@ -1,0 +1,13 @@
+# ThisService code: 1901001 to 1901999
+
+UnauthorizedError = 401  # 未登录
+
+INTERNAL_SERVICE_ERROR = 1901500  # 服务器内部错误
+Unauthorized = 1901401
+REQUEST_ERROR = 1901400
+
+# 通用业务错误
+NOT_FOUND_RECORD = 400101  # 找不到记录
+REQUEST_PARAM_ERROR = 1901101
+
+LIVE_IS_DRAFT = 1901700
