@@ -1,23 +1,15 @@
-from pkg.dao.mysql import engien
-from pkg.dao.user import *
+from pkg.dao.mysql import engien, session_scope
+import pkg.dao.user as dao_user
 from pkg.dao.redis import redis_cli
 from pkg.model.constant import UserRedisInfoCacheKey, UserQueryBatchMax
+from pkg.model.user import User
 from pkg.codes.code import *
+from typing import *
 
 import json
 
 
 class UserHelper:
-    @classmethod
-    def get_user_by_name(cls, username) -> Dict:
-        # illegal value filter
-        if not User.check_username(username):
-            return None
-
-        v = redis_cli.hget(UserRedisInfoCacheKey, username)
-        if v is not None:
-            return json.loads(v)
-        UserHelper.fetch_user()
 
     @classmethod
     def fetch_users(cls, user_ids: List[int]) -> Dict[str, Any]:
@@ -28,8 +20,7 @@ class UserHelper:
         diff_ids = [x for x in user_ids if x["uuid"] not in exist_ids]
         if not diff_ids:
             return users
-        db = get_db()
-        users = db.query(User).filter(User.uuid.in_(user_ids)).all()
+        users = dao_user.fetch_users(user_ids)
         update_data = {}
         for u in users:
             update_data[u.usename] = u.to_dict()
@@ -42,8 +33,7 @@ class UserHelper:
         u = redis_cli.hget(UserRedisInfoCacheKey, user_id)
         if u is not None:
             return u
-        db = get_db()
-        user = db.query(User).filter(User.uuid == user_id).one()
+        user = dao_user.fetch_user(user_id=user_id)
         if user is None:
             return
         redis_cli.hset(UserRedisInfoCacheKey, user.username, user.to_dict())
@@ -52,8 +42,13 @@ class UserHelper:
 
     @classmethod
     def fetch_user_by_name(cls, username: int) -> Dict[str, Any]:
-        db = get_db()
-        user = db.query(User).filter(User.username == username).one()
+        # illegal value filter
+        if not User.check_username(username):
+            return None
+        u = redis_cli.hget(UserRedisInfoCacheKey, username)
+        if u is not None:
+            return u
+        user = dao_user.fetch_user(username=username)
         if user is None:
             return
         redis_cli.hset(UserRedisInfoCacheKey, user.username, user.to_dict())

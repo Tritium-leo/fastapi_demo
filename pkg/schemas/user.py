@@ -1,4 +1,13 @@
-from pydantic import BaseModel
+from .base import *
+
+
+class UserBase(BaseModel):
+    uuid: int
+    username: str
+
+
+class LoginRes(Response):
+    data: UserBase
 
 
 class RequestLogin(BaseModel):

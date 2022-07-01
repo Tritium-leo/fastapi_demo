@@ -1,10 +1,11 @@
 .PHONY:init
 init:
-	pip install -f ./requirements.txt
+	python -m pip install --upgrade pip
+	pip install -r ./requirements.txt
 
 .PHONY:run
 run:
-	gunicorn main:app -b 0.0.0.0:8080 -w 4 -k uvicorn.workers.UvicornWorker --chdir ./cmd
+	gunicorn main:app -c config/config.py
 
 .PHONY:build
 build\:base:

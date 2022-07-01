@@ -1,31 +1,37 @@
+import json
+
 from pkg.routers.router import v1, v2
-from pkg.request.user import *
-from pkg.model.base import *
 from pkg.help.user_helper import UserHelper
+import pkg.dao.user as dao_user
+from pkg.schemas.user import *
+from pkg.codes import code
+from pkg.mq.rabbitmq import rabbitmq_cli
 
 
-@v1.get("/")
-def v1_index():
-    return {"msg": "hello v1"}
-
-
-@v1.post("/login")
+@v1.post("/login", response_model=LoginRes)
 def login(info: RequestLogin):
-    return SuccessResponse(info.dict()).dict()
+    return LoginRes(info.dict()).dict()
 
 
-@v1.post("/register")
+@v1.post("/register", response_model=BoolResponse)
 def register(info: RequestRegister):
-    u = UserHelper.get_user_by_name(info.username)
+    res = False
+    u = UserHelper.fetch_user_by_name(info.username)
+    if u is not None:
+        return BoolResponse(code=code.REQUEST_PARAM_ERROR, data=res).dict()
+    u = dao_user.create_user(info)
+    if u is not None:
+        return BoolResponse(code=code.INTERNAL_SERVICE_ERROR, data=res).dict()
+    res = True
+    return BoolResponse(res).dict()
 
-    return SuccessResponse(data=info.dict()).dict()
 
-
-@v1.post("/user_cancel")
+@v1.post("/user_cancel", response_model=BoolResponse)
 def user_cancel(info: RequestUserCancel):
-    return SuccessResponse(info.dict()).dict()
+    return BoolResponse(True).dict()
 
 
-@v1.get("/verification_code")
+@v1.get("/verification_code", response_model=BoolResponse)
 def verification_code(info: RequestVerificationCode):
-    return SuccessResponse(info.dict()).dict()
+    rabbitmq_cli.publish_msg("user-service-producer", "", info.json())
+    return BoolResponse(data=True).dict()

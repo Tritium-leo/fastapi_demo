@@ -1,3 +1,8 @@
+app:
+  env: dev
+  version: v1
+  machine_id: local
+
 mysql:
   max_idle_conn: 10
   max_open_conn: 20
@@ -18,7 +23,7 @@ user-service-producer:
 user-service-consumer:
   exchangeName: testproject.service
   queueName: social
-  queueDurable: true # chijiuhua
+  queueDurable: true #chi jiuhua
   exchangeDurable: true
   kind: fanout
   parallel: 4
