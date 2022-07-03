@@ -1,37 +1,69 @@
 stages:
-  - unittest
   - build
+  - unittest
   - deploy
 #
 variables:
   LOCAL_REPO: "192.168.3.7:8081/fastapi_demo"
 
-before_script:
-  - docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} http://192.168.3.7:8081
+#before_script:
+#  -
+
+# ----------- 打包 ----------------
+# builder 基础镜像
+build-builder:
+  stage: build
+  when: manual
+  only:
+    - master
+    - release
+    - canary
+    - /^feat.+$/
+    - /^fix\/.+$/
+  script:
+    - docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} http://192.168.3.7:8081
+    - cd ${CI_PROJECT_DIR}
+    - docker build -t ${LOCAL_REPO}/builder:$CI_COMMIT_SHA -f ./Dockerfile.builder .
+    - docker push ${LOCAL_REPO}/builder:$CI_COMMIT_SHA
+  tags:
+    - python3
+
+build-app:
+  stage: build
+  image: ${LOCAL_REPO}/builder:latest # 用最新的builder做构建，减少打包时间
+  only:
+    - master
+    - release
+    - canary
+    - /^feat.+$/
+    - /^fix\/.+$/
+  script:
+    - docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} http://192.168.3.7:8081
+    - cd ${CI_PROJECT_DIR}
+    - docker build -t ${LOCAL_REPO}/app:$CI_COMMIT_SHA -f ./Dockerfile .
+    - docker push ${LOCAL_REPO}/app:$CI_COMMIT_SHA
+  tags:
+    - python3
+
+# --------- 单元测试 ----------
 
 Unittest:
   stage: unittest
+  dependencies:
+    - build-app # 依赖正式包构建完成之后
+  image: ${LOCAL_REPO}/app:latest
   script:
     - cd ${CI_PROJECT_DIR}
     - make test
   tags:
     - python3
 
-build:
-  stage: build
-  only:
-    - master
-    - /^feat.+$/
-    - /^fix\/.+$/
-  script:
-    - cd ${CI_PROJECT_DIR}
-    - docker build --pull -t ${LOCAL_REPO}/app:$CI_COMMIT_SHA -f ./cmd/${CMD_NAME}/Dockerfile .
-    - docker push ${LOCAL_REPO}/app:$CI_COMMIT_SHA
-  tags:
-    - python3
+# ---------- 部署 ------------------
 
 deploy_prev_test_project:
   stage: deploy
+  dependencies:
+    - Unittest
   when: manual
   script:
     - cd ${CI_PROJECT_DIR}
@@ -42,5 +74,5 @@ deploy_prev_test_project:
     - master
   variables:
     ENV: staging-eks-1
-    APP_NAME: test_project
+    APP_NAME: fastapi_test
     TAG: $CI_COMMIT_SHA
