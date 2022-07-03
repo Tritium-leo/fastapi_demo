@@ -20,4 +20,5 @@ if __name__ == "__main__":
             result = runner.run(discover)
             if len(result.errors) > 0:
                 logger.info("FIND ERROR!")
+                raise Exception("GET ERROR!")
                 break
