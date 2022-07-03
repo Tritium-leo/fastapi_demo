@@ -7,7 +7,7 @@ variables:
   LOCAL_REPO: "192.168.3.7:8081/fastapi_demo/"
 
 before_script:
-  - winpty docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} http://192.168.3.7:8081
+  - docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} http://192.168.3.7:8081
 
 Unittest:
   stage: unittest
