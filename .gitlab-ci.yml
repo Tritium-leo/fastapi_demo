@@ -30,7 +30,6 @@ build-builder:
 
 build-app:
   stage: build
-  image: ${LOCAL_REPO}/builder:latest # 用最新的builder做构建，减少打包时间
   only:
     - master
     - release
@@ -72,6 +71,8 @@ deploy_prev_test_project:
     - python3
   only:
     - master
+    - release
+    - canary
   variables:
     ENV: staging-eks-1
     APP_NAME: fastapi_test
