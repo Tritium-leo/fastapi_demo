@@ -1,7 +1,7 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: test-project-configmap
+  name: testcase-project-configmap
   namespace: core
 data:
   config.yaml: |
@@ -14,8 +14,8 @@ apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: test-project
-  name: test-project
+    app: testcase-project
+  name: testcase-project
   namespace: core
 spec:
   replicas: 1
@@ -30,8 +30,8 @@ spec:
       containers:
         - envFrom:
             - secretRef:
-                name: core-test-project-secrets
-          image: test-project/test-project:latest
+                name: core-testcase-project-secrets
+          image: testcase-project/testcase-project:latest
           imagePullPolicy: Always
           livenessProbe:
             exec:
@@ -49,7 +49,7 @@ spec:
           ports:
             - containerPort: 9102
               protocol: TCP
-          name: test-project
+          name: testcase-project
           env:
             - name: ENV
               value: DEV
@@ -68,8 +68,8 @@ spec:
               memory: 1024Mi
           volumeMounts:
             - mountPath: /app/configmap
-              name: test-project-configmap
+              name: testcase-project-configmap
       volumes:
         - configMap:
-            name: test-project-configmap
-          name: test-project-configmap
+            name: testcase-project-configmap
+          name: testcase-project-configmap

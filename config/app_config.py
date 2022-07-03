@@ -1,5 +1,5 @@
-from typing import *
 from enum import Enum
+
 from pydantic import BaseModel
 
 
@@ -13,6 +13,7 @@ class AppConfig(BaseModel):
     env: EnvEnum = 'dev'
     version: str
     machine_id: str
+    sso_center: str
 
     def is_dev(self) -> bool:
         return self.env == EnvEnum.Dev

@@ -43,13 +43,13 @@ def loads(s, *, object_hook=None, parse_float=None,
 if __name__ == "__main__":
     test_data = {"a": 123, "b": "bc", "c": datetime.datetime.now(), "d": datetime.date.today(), "e": {"d": "123"},
                  "f": ["123", "456"]}
-    print(test_data)
+    logger.info(test_data)
     # d = json.dumps(test_data, default=json_encoder)
-    # print(d)
+    # logger.info(d)
     # data2 = json.loads(d, cls=MyJsonDecoder)
-    # print("----", data2)
+    # logger.info("----", data2)
 
     d = dumps(test_data)
-    print(d)
+    logger.info(d)
     o2 = loads(d)
-    print(o2)
+    logger.info(o2)

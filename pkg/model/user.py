@@ -1,9 +1,9 @@
-from . import Base
-from sqlalchemy import Column, Integer, String, BIGINT, Table, ForeignKey
+from sqlalchemy import Column, Integer, String, BIGINT, Table, ForeignKey, SmallInteger
 from sqlalchemy.orm import relationship, backref
 from werkzeug.security import generate_password_hash, check_password_hash
-from pkg.model.constant import *
-from pydantic import BaseModel
+
+from pkg import constant
+from . import Base
 
 role_user = Table("role_user",
                   Base.metadata,
@@ -12,14 +12,21 @@ role_user = Table("role_user",
                   )
 
 
+class UserState():
+    cancel = -1  # 自己注销
+    ban = 0  # 系统封
+    normal = 1  # 正常
+
+
 class User(Base):
     __tablename__ = "users"
 
     id = Column(Integer, primary_key=True, autoincrement=True)
     # 4640214741665447937
-    uuid = Column(BIGINT, nullable=False)
-    username = Column(String(20), nullable=False)
+    uuid = Column(BIGINT, nullable=False, unique=True)
+    username = Column(String(20), nullable=False, unique=True)
     _password_hash_ = Column(String(256), nullable=False)
+    state = Column(SmallInteger, nullable=False, default=UserState.normal)
 
     # 多对多关联
     roles = relationship('Role', secondary=role_user, backref=backref('users', lazy='dynamic'))
@@ -37,6 +44,10 @@ class User(Base):
 
     @classmethod
     def check_username(cls, username: str) -> bool:
-        if len(username) < UserNameMinLen or len(username) >= UsernameMaxLen:
+        if len(username) < constant.user.UserNameMinLen or len(username) >= constant.user.UsernameMaxLen:
             return False
         return True
+
+    # 账户是否是正常状态
+    def is_normal(self) -> bool:
+        return self.state == UserState.normal

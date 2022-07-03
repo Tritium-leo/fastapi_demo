@@ -1,0 +1,42 @@
+# TODO
+stages:
+  - unittest
+  - analyze
+  - build
+  - push
+  - deploy
+#
+variables:
+  LOCAL_REPO: "192.168.3.7:8081/fastapi_demo/"
+
+Unittest:
+  stage: unittest
+  script:
+    - make testcase
+build:
+  extends: .docker-login
+  stage: build
+  only:
+    - release
+    - master
+    - canary
+    - pre
+    - /^feat.+$/
+    - /^fix\/.+$/
+  script:
+    - cd $CI_PROJECT_DIR
+    - docker build --pull -t ${LOCAL_REPO}/app:$CI_COMMIT_SHA -f ./cmd/${CMD_NAME}/Dockerfile .
+    - docker push ${LOCAL_REPO}/app:$CI_COMMIT_SHA
+
+deploy_prev_test_project:
+  stage: deploy
+  extends: .deploy_template_v2
+  when: manual
+  tags:
+    - aws-hk-canary-v1
+  only:
+    - canary
+  variables:
+    ENV: staging-eks-1
+    APP_NAME: test_project
+    TAG: $CI_COMMIT_SHA

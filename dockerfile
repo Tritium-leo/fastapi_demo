@@ -1,4 +1,4 @@
-FROM testproject/builder
+FROM 192.168.3.7:8081/fastapi_demo/builder
 
 COPY . /app
 

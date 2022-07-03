@@ -1,10 +1,9 @@
-import json
+from typing import *
+
+from pydantic import *
 
 import redis
-from pydantic import *
-from typing import *
-from config.init import config
-from pkg.model.constant import RedisKeyPrev
+from pkg import constant
 from vender import jsonplus
 
 
@@ -27,7 +26,7 @@ class RedisCli:
         self.pool.disconnect(inuse_connections=True)
 
     def format_key(self, key: str) -> str:
-        return f"{RedisKeyPrev}|{key}"
+        return f"{constant.base.RedisKeyPrev}|{key}"
 
     def format_value(self, value: str):
         # list dict set tuple
@@ -53,7 +52,6 @@ class RedisCli:
     def get(self, k: str):
         k = self.format_key(k)
         conn = self.get_conn()
-
         return RedisCli.try_parse_dict(conn.get(k))
 
     def set(self, k, v, px=-1, nx=False, xx=False):
@@ -143,5 +141,9 @@ class RedisCli:
         conn.lpush(k, *args)
 
 
-rc = RedisConfig(**config["redis"])
-redis_cli = RedisCli(rc)
+client: RedisCli
+
+
+def init_redis(conf: RedisConfig):
+    global client
+    client = RedisCli(conf)

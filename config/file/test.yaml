@@ -1,0 +1,3 @@
+db:
+  db_type: mysql
+  database: test_fastapi_demo

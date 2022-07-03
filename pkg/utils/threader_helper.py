@@ -1,7 +1,7 @@
+import ctypes
+import inspect
 import threading
 import time
-import inspect
-import ctypes
 
 
 def _async_raise(tid, exctype):
@@ -25,10 +25,10 @@ def stop_thread(thread):
 
 class TestThread(threading.Thread):
     def run(self):
-        print("begin")
+        logger.info("begin")
         while True:
             time.sleep(0.1)
-        print("end")
+        logger.info("end")
 
 
 if __name__ == "__main__":
@@ -36,4 +36,4 @@ if __name__ == "__main__":
     t.start()
     time.sleep(1)
     stop_thread(t)
-    print("stoped")
+    logger.info("stoped")

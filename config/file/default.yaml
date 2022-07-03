@@ -2,8 +2,9 @@ app:
   env: dev
   version: v1
   machine_id: local
+  sso_center: https://xxxx/
 
-mysql:
+db:
   max_idle_conn: 10
   max_open_conn: 20
   log_mode: False

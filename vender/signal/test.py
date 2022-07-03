@@ -1,5 +1,5 @@
-import signal, time
-import sys
+import signal
+import time
 
 
 # https://blog.csdn.net/z5z5z5z56/article/details/107586391
@@ -29,10 +29,10 @@ import sys
 # （3）执行缺省操作，Linux对每种信号都规定了默认操作。注意，进程对实时信号的缺省反应是进程终止。
 
 def term_sig_handler(signum, frame):
-    print("中断发生。")
+    logger.info("中断发生。")
     # 需要最后做的事情
-    print(signum)
-    print("执行最后的清理工作。")
+    logger.info(signum)
+    logger.info("执行最后的清理工作。")
     exit()
 
 
@@ -42,5 +42,5 @@ if __name__ == "__main__":
     signal.signal(signal.SIGHUP, term_sig_handler)  #
     # signal.signal(signal.SIGKILL) can't catch
     while True:
-        print("RUNNING")
+        logger.info("RUNNING")
         time.sleep(3)

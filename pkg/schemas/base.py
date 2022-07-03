@@ -1,5 +1,4 @@
-from typing import *
-from pydantic import *
+from pydantic import BaseModel
 
 
 class Response(BaseModel):
@@ -13,7 +12,3 @@ class BoolResponse(Response):
 
 class IntResponse(Response):
     data: int
-
-
-class JsonResponse(Response):
-    data: Dict[str, Any]

@@ -12,13 +12,13 @@ def get_snow_id():
         new_id = snow_cli.get_guid()
         prev = new_id
         if autoincr > 1:
-            print(f"IN SNOWFLAKE DEAD DURATION:used PREV:{prev}, autoincre:{autoincr} ")
+            logger.info(f"IN SNOWFLAKE DEAD DURATION:used PREV:{prev}, autoincre:{autoincr} ")
             # rop range key
             while new_id <= prev + autoincr:
                 new_id = snow_cli.get_guid()
             autoincr = 1
     except:
-        print("ERROR ! SNOW FLAKE SERVER DEAD")
+        logger.info("ERROR ! SNOW FLAKE SERVER DEAD")
         new_id = prev + autoincr
         autoincr += 1
     return new_id

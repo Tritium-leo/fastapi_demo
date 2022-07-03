@@ -1,12 +1,14 @@
 import threading
 import time
+from typing import *
 
 import pika
 from pika.exchange_type import ExchangeType
-from config.init import config
 from pydantic import BaseModel
-from typing import *
+
+from config.init import config
 from pkg.utils.threader_helper import stop_thread
+
 local = threading.local()
 
 
@@ -21,7 +23,7 @@ class MQConsumerThread(threading.Thread):
         while True:
             self.delay.start()
             time.sleep(10)
-        print("exit xiancheng")
+        logger.info("exit xiancheng")
 
 
 class RabbitMQConfig(BaseModel):
@@ -127,6 +129,7 @@ class RabbitMQClient:
     consumers: Dict[str, RabbitMQConsumer]
     conf: RabbitMQConfig
     _treads = []
+
     def __init__(self, conf: RabbitMQConfig):
         self.conf = conf
         self.producers = {}
@@ -240,6 +243,10 @@ class RabbitMQClient:
             idx += 1
 
 
+client = None
 
-rc = RabbitMQConfig(**config["rabbitmq"])
-rabbitmq_cli = RabbitMQClient(rc)
+
+def init_rabbitmq(conf: RabbitMQConfig):
+    global client
+    if client is None:
+        client = RabbitMQClient(conf)

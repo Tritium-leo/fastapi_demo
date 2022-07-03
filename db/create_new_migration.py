@@ -1,6 +1,5 @@
 import os
 import time
-import argparse
 from pathlib import Path
 
 project_root_path = os.environ.get("PROJECT_ROOT")
@@ -17,11 +16,11 @@ file_paths = [
 ]
 
 if not file_dir.exists():
-    print(f"File Dir Didn't exist Dir : [ {str(file_dir)} ]")
+    logger.info(f"File Dir Didn't exist Dir : [ {str(file_dir)} ]")
 elif any([x.exists() for x in file_paths]):
-    print(f"File Already exist. Path: [ {str(file_paths)} ] ")
+    logger.info(f"File Already exist. Path: [ {str(file_paths)} ] ")
 else:
     for file_path in file_paths:
         with open(str(file_path), 'w') as f:
             f.write("")
-        print(f"Success create file :{file_path}")
+        logger.info(f"Success create file :{file_path}")

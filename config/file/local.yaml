@@ -1,9 +1,14 @@
-mysql:
+snowflake:
+  host: 0.0.0.0
+  port: 8910
+
+db:
+  db_type: mysql
   host: 0.0.0.0
   port: 3306
   username: root
   password: root
-  database: test_project
+  database: fastapi_demo
 
 redis:
   host: 0.0.0.0

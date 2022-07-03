@@ -2,17 +2,18 @@ from .base import *
 
 
 class UserBase(BaseModel):
-    uuid: int
-    username: str
+    uuid: int = -1
+    username: str = ""
 
 
-class LoginRes(Response):
-    data: UserBase
+class LoginResponse(Response):
+    data: UserBase = UserBase()
 
 
 class RequestLogin(BaseModel):
     username: str
     password: str
+    keep_login: bool = False
 
 
 class RequestRegister(BaseModel):

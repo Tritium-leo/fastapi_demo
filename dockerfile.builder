@@ -6,7 +6,7 @@ RUN mkdir /app
 
 COPY . /app
 
-RUN cd /app && pip install -r ./requirements.txt
+RUN cd /app && pip install -r ./requirements.txt -i https://pypi.tuna.tsinghua.edu.cn/simple/
 
 WORKDIR /app
 

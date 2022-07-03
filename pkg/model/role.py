@@ -1,7 +1,5 @@
 from . import Base
 from sqlalchemy import Column, Integer, String
-from werkzeug.security import generate_password_hash, check_password_hash
-from pkg.model.constant import *
 
 
 class Role(Base):
