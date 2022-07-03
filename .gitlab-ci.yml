@@ -1,9 +1,6 @@
-# TODO
 stages:
   - unittest
-  - analyze
   - build
-  - push
   - deploy
 #
 variables:
@@ -14,20 +11,20 @@ Unittest:
   script:
     - make testcase
   tags:
-    py3
+    - py3
+
 build:
   stage: build
   only:
-    - release
     - master
-    - canary
-    - pre
     - /^feat.+$/
     - /^fix\/.+$/
   script:
     - cd $CI_PROJECT_DIR
     - docker build --pull -t ${LOCAL_REPO}/app:$CI_COMMIT_SHA -f ./cmd/${CMD_NAME}/Dockerfile .
     - docker push ${LOCAL_REPO}/app:$CI_COMMIT_SHA
+  tags:
+    - py3
 
 deploy_prev_test_project:
   stage: deploy
@@ -35,7 +32,7 @@ deploy_prev_test_project:
   tags:
     - py3
   only:
-    - canary
+    - master
   variables:
     ENV: staging-eks-1
     APP_NAME: test_project
