@@ -4,7 +4,7 @@ stages:
   - deploy
 #
 variables:
-  LOCAL_REPO: "192.168.3.7:8081/fastapi_demo/"
+  LOCAL_REPO: "192.168.3.7:8081/fastapi_demo"
 
 before_script:
   - docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} http://192.168.3.7:8081
