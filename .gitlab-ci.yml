@@ -29,6 +29,8 @@ build:
 deploy_prev_test_project:
   stage: deploy
   when: manual
+  script:
+    - make docker:run
   tags:
     - py3
   only:
