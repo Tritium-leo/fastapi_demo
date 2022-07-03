@@ -13,7 +13,7 @@ Unittest:
   stage: unittest
   script:
     - cd ${CI_PROJECT_DIR}
-    - make testcase
+    - make test
   tags:
     - python3
 
