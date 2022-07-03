@@ -53,7 +53,7 @@ Unittest:
   image: ${LOCAL_REPO}/app:latest
   script:
     - cd ${CI_PROJECT_DIR}
-    - make test
+    - export PYTHONPATH=$PYTHONPATH:`pwd` && python ./testcase/run_test.py
   tags:
     - python3
 
