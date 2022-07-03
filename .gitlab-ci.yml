@@ -13,8 +13,9 @@ Unittest:
   stage: unittest
   script:
     - make testcase
+  tags:
+    py3
 build:
-  extends: .docker-login
   stage: build
   only:
     - release
@@ -30,10 +31,9 @@ build:
 
 deploy_prev_test_project:
   stage: deploy
-  extends: .deploy_template_v2
   when: manual
   tags:
-    - aws-hk-canary-v1
+    - py3
   only:
     - canary
   variables:
