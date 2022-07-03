@@ -15,7 +15,7 @@ Unittest:
     - cd ${CI_PROJECT_DIR}
     - make testcase
   tags:
-    - py3
+    - python3
 
 build:
   stage: build
@@ -28,7 +28,7 @@ build:
     - docker build --pull -t ${LOCAL_REPO}/app:$CI_COMMIT_SHA -f ./cmd/${CMD_NAME}/Dockerfile .
     - docker push ${LOCAL_REPO}/app:$CI_COMMIT_SHA
   tags:
-    - py3
+    - python3
 
 deploy_prev_test_project:
   stage: deploy
@@ -37,7 +37,7 @@ deploy_prev_test_project:
     - cd ${CI_PROJECT_DIR}
     - make docker:run
   tags:
-    - py3
+    - python3
   only:
     - master
   variables:
