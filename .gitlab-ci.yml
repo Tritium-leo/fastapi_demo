@@ -23,7 +23,7 @@ build-builder:
   script:
     - docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} http://192.168.3.7:8081
     - cd ${CI_PROJECT_DIR}
-    - docker build -t ${LOCAL_REPO}/builder:$CI_COMMIT_SHA -f ./Dockerfile.builder .
+    - docker build -t ${LOCAL_REPO}/builder:$CI_COMMIT_SHA -f ./dockerfile.builder .
     - docker push ${LOCAL_REPO}/builder:$CI_COMMIT_SHA
   tags:
     - python3
@@ -39,7 +39,7 @@ build-app:
   script:
     - docker login -u ${DOCKER_USER} -p ${DOCKER_PASSWORD} http://192.168.3.7:8081
     - cd ${CI_PROJECT_DIR}
-    - docker build -t ${LOCAL_REPO}/app:$CI_COMMIT_SHA -f ./Dockerfile .
+    - docker build -t ${LOCAL_REPO}/app:$CI_COMMIT_SHA -f ./dockerfile .
     - docker push ${LOCAL_REPO}/app:$CI_COMMIT_SHA
   tags:
     - python3
