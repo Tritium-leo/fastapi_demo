@@ -1,6 +1,6 @@
-snowflake:
-  host: 0.0.0.0
-  port: 8910
+app:
+  snowflake_host: 0.0.0.0
+  snowflake_port: 8910
 
 db:
   db_type: mysql

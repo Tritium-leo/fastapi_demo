@@ -1,9 +1,10 @@
 import multiprocessing
+
 from root import PROJECT_ROOT_PATH
 
 debug = True
 
-daemon = False
+daemon = True
 
 bind = "0.0.0.0:8080"
 
@@ -13,7 +14,7 @@ worker_class = 'uvicorn.workers.UvicornWorker'
 # worker_class = 'uvicorn.workers.UvicornH11Worker'
 
 workers = multiprocessing.cpu_count() * 2 + 1
-worker_connections = 2000 # 最大客户端并发数量，默认情况下这个值为1000。
+worker_connections = 2000  # 最大客户端并发数量，默认情况下这个值为1000。
 loglevel = "debug"
 threads = 2
 

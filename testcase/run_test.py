@@ -19,6 +19,6 @@ if __name__ == "__main__":
             discover = unittest.TestLoader().discover(str(prev), "test*.py")
             result = runner.run(discover)
             if len(result.errors) > 0:
-                logger.info("FIND ERROR!")
+                logger.error("FIND ERROR!")
                 raise Exception("GET ERROR!")
                 break

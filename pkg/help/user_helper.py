@@ -45,9 +45,9 @@ class UserHelper:
         # illegal value filter
         if not User.check_username(username):
             return None
-        # u = redis.client.hget(constant.user.UserRedisInfoCacheKey, username)
-        # if u is not None:
-        #     return User(**u)
+        u = redis.client.hget(constant.user.UserRedisInfoCacheKey, username)
+        if u is not None:
+            return User(**u)
         user = dao_user.fetch_user(username=username)
         if user is None:
             return

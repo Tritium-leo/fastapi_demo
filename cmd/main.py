@@ -1,37 +1,82 @@
+import enum
 import os
-import sys
+import time
 
-from config.app_config import AppConfig
-from config.init import load_file, config
-from root import PROJECT_ROOT_PATH
-
-load_file(f"{PROJECT_ROOT_PATH}/config/file/default.yaml", f"{PROJECT_ROOT_PATH}/config/file/local.yaml",
-          os.environ.get("CONFIG_PATH"))
-
-import uvicorn
 import snowflake.client
+import uvicorn
 from fastapi import FastAPI
-from loguru import logger
 from fastapi.middleware.cors import CORSMiddleware
+from loguru import logger
+from pydantic import BaseModel
 
-from pkg.routers import router
-from pkg.mq import rabbitmq
-from pkg.mq import consumers
+from config import model as config_model
 from pkg.dao import redis, db
 from pkg.middlewares import ErrorMiddleware
+from pkg.mq import consumers
+from pkg.mq import rabbitmq
+from pkg.routers import router
+from root import PROJECT_ROOT_PATH
 
-logger.add(sys.stdout, colorize=True, format="<green>{time:HH:mm:ss}</green> | {level} | <level>{message}</level>")
+# logger
+logger.remove(handler_id=None)
+logger.add(
+    f"{PROJECT_ROOT_PATH}/log/fastapi_demo_{str(int(time.time()))[:-5] + '0' * 5}.log",
+    colorize=False,
+    format="<green>{time:HH:mm:ss}</green> | {level} | <level>{message}</level>",
+    rotation="1 day",
+    retention="10 days",
+    compression="zip",
+    catch=True,
+    enqueue=True
+)
+
+
+class EnvEnum(enum.Enum):
+    Dev = 'dev'
+    Prev = 'prev'
+    Prod = 'prod'
+
+
+class AppConfig(BaseModel):
+    env: EnvEnum = 'dev'
+    version: str
+    machine_id: str
+    sso_center: str
+    # 分布式id
+    snowflake_host: str
+    snowflake_port: int
+
+    def is_dev(self) -> bool:
+        return self.env == EnvEnum.Dev.value
+
+    def is_prev(self) -> bool:
+        return self.env == EnvEnum.Prev.value
+
+    def is_prod(self) -> bool:
+        return self.env == EnvEnum.Prod.value
 
 
 def init_app():
+    config = config_model.Config.load_dir(f"{PROJECT_ROOT_PATH}/config/file/default.yaml",
+                                          os.environ.get("APP.CONFIG_PATH",
+                                                         f"{PROJECT_ROOT_PATH}/config/file/local.yaml"))
+    app_conf = config.struct_map('app', AppConfig)
     # connect to snowflake server
-    snowflake.client.setup(config["snowflake"]["host"], config["snowflake"]["port"])
+    snowflake.client.setup(app_conf.snowflake_host, app_conf.snowflake_port)
     # init main db
-    db.init_db(db.DBConfig(**config['db']))
+    db.init_db(config.struct_map('db', db.DBConfig))
     # init redis
-    redis.init_redis(redis.RedisConfig(**config['redis']))
-    # conf
-    app_conf = AppConfig(**config['app'])
+    redis.init_redis(config.struct_map("redis", redis.RedisConfig))
+
+    # mq register
+    rabbitmq.init_rabbitmq(config.struct_map("rabbitmq", rabbitmq.RabbitMQConfig))
+    # producer
+    rabbitmq.client.new_producer("user-service-producer")
+    # mq init consumer
+    consumers.init()
+    rabbitmq.client.start()
+
+    # -------app ---
     # docs show?
     if app_conf.is_dev():
         app = FastAPI(title="fast_api_demo", version=app_conf.version, debug=True)
@@ -50,13 +95,6 @@ def init_app():
         allow_headers=["*"],
     )
     app.add_middleware(ErrorMiddleware)
-
-    # mq register
-    rabbitmq.init_rabbitmq(rabbitmq.RabbitMQConfig(**config["rabbitmq"]))
-    rabbitmq.client.new_producer("user-service-producer")
-    # mq init consumer
-    consumers.init()
-    rabbitmq.client.start()
     return app
 
 

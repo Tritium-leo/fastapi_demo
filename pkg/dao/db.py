@@ -2,8 +2,11 @@ import enum
 from contextlib import contextmanager
 
 import sqlalchemy
+from loguru import logger
 from pydantic import BaseModel
 from sqlalchemy.orm import sessionmaker
+
+from pkg.errors import sql_error
 
 
 class DBType(enum.Enum):
@@ -64,6 +67,7 @@ def session_scope() -> sqlalchemy.orm.Session:
         session.commit()
     except Exception as e:
         session.rollback()
-        raise e
+        logger.error(f"【SQL ERROR】{str(e)}")
+        raise sql_error.SqlException(e)
     finally:
         session.close()

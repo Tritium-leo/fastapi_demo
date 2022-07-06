@@ -6,7 +6,7 @@ import pika
 from pika.exchange_type import ExchangeType
 from pydantic import BaseModel
 
-from config.init import config
+from config import model as config_model
 from pkg.utils.threader_helper import stop_thread
 
 local = threading.local()
@@ -48,16 +48,15 @@ class RabbitMqProducer:
     ch: pika.adapters.blocking_connection.BlockingChannel
     conf: RabbitMQProducerConfig
 
-    def __init__(self, conn: pika.BlockingConnection, config_name: str,
-                 ch: pika.adapters.blocking_connection.BlockingChannel):
+    def __init__(self, conn: pika.BlockingConnection,
+                 ch: pika.adapters.blocking_connection.BlockingChannel,
+                 config_name: str,
+                 conf: RabbitMQProducerConfig,
+                 ):
         self._conn_ = conn
         self.config_name = config_name
         self.ch = ch
-        if config_name not in config:
-            raise Exception(f"Producer No Config:{config_name}")
-        self.conf = RabbitMQProducerConfig(**config[config_name])
-        if self.conf.exchangeName != "" and self.conf.kind == "":
-            raise Exception(f"load amqp producer {config_name} configuration fail, kind is empty")
+        self.conf = conf
 
     def publish(self, headers: Dict[str, Any], body: str) -> bool:
         # TODO IF FAILED , RETRY
@@ -100,14 +99,12 @@ class RabbitMQConsumer:
     conf: RabbitMQConsumerConfig
 
     def __init__(self, conn: pika.BlockingConnection, ch: pika.adapters.blocking_connection.BlockingChannel,
-                 config_name: str, callback):
+                 config_name: str, conf, callback):
         self._conn_ = conn
         self.ch = ch
         self.config_name = config_name
         self.callback = callback
-        if config_name not in config:
-            raise Exception(f"Consumer No Config:{config_name}")
-        self.conf = RabbitMQConsumerConfig(**config[config_name])
+        self.conf = conf
 
     def start(self):
         try:
@@ -147,9 +144,13 @@ class RabbitMQClient:
     def new_producer(self, config_name: str):
         if config_name in self.producers:
             raise Exception(f"producer quene already exists: name:{config_name}")
-        if config_name not in config:
+        if config_name not in config_model.config.data:
             raise Exception(f"config doesn't exist this producer:{config_name},please check")
-        conf = RabbitMQProducerConfig(**config[config_name])
+
+        conf = config_model.config.struct_map(config_name, RabbitMQProducerConfig)
+        if conf.exchangeName != "" and conf.kind == "":
+            raise Exception(f"load amqp producer {config_name} configuration fail, kind is empty")
+
         conn = self.get_conn()
         ch = conn.channel()
         if conf.queueName is not None and conf.queueName != "":
@@ -171,20 +172,21 @@ class RabbitMQClient:
                 exchange_type=exchange)
         else:
             raise Exception(f"Rabbitmq quene name or exchange name is not config。{config_name}")
-        self.producers[config_name] = RabbitMqProducer(conn, config_name, ch)
+        self.producers[config_name] = RabbitMqProducer(conn, ch, config_name, conf)
 
     def publish_msg(self, producer: str, headers, body):
         if producer not in self.producers:
             raise Exception(f"This MQ Product Didn't registry,{producer}")
         self.producers[producer].publish(headers, body)
 
-    def new_consumer(self, config_name: str, callback):
+    def new_consumer(self, config_name: str, callback, thread_num: int = 1):
         if config_name in self.consumers:
             raise Exception(f"Consumer quene already exists: name:{config_name}")
-        if config_name not in config:
+        if config_name not in config_model.config.data:
             raise Exception(f"This Consumer Quene Config didn't exist :{config_name}")
         conn = self.get_conn()
-        conf = RabbitMQConsumerConfig(**config[config_name])
+        conf = config_model.config.struct_map(config_name, RabbitMQConsumerConfig)
+
         ch = conn.channel()
         ch.basic_qos(prefetch_count=conf.prefetch)
         if conf.exchangeName != "" and conf.exchangeName is not None:
@@ -223,7 +225,7 @@ class RabbitMQClient:
                                         arguments={}
                                         )
 
-        self.consumers[consumer_tag] = RabbitMQConsumer(conn, ch, config_name, callback)
+        self.consumers[consumer_tag] = RabbitMQConsumer(conn, ch, config_name, conf, callback)
 
     def close(self):
         # close thread

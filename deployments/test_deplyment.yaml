@@ -1,75 +1,83 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: testcase-project-configmap
+  name: fastapi_demo-configmap
   namespace: core
 data:
   config.yaml: |
     config:
-      ENV: "DEV"
-    postgres:
-      logMode: false
+      env: "DEV"
+    db:
+      host: 192.168.3.7
+      database: fastapi_demo_canary
+    redis：
+      host: 192.168.3.7
+    rabbitmq:
+      host: 192.168.3.7
 ---
 apiVersion: extensions/v1beta1
 kind: Deployment
 metadata:
   labels:
-    app: testcase-project
-  name: testcase-project
+    app: fastapi_demo-project
+  name: fastapi_demo-project
   namespace: core
 spec:
   replicas: 1
   template:
     metadata:
       labels:
-        app: news-crawler
+        app: fastapi_demo
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9102"
     spec:
       containers:
-        - envFrom:
-            - secretRef:
-                name: core-testcase-project-secrets
-          image: testcase-project/testcase-project:latest
-          imagePullPolicy: Always
-          livenessProbe:
-            exec:
-              command:
-                - /bin/healthcheck
-                - --server_name
-                - "test_project"
-                - --server_address
-                - "0.0.0.0:8080"
-            failureThreshold: 3
-            initialDelaySeconds: 5
-            periodSeconds: 10
-            successThreshold: 1
-            timeoutSeconds: 1
-          ports:
-            - containerPort: 9102
-              protocol: TCP
-          name: testcase-project
-          env:
-            - name: ENV
-              value: DEV
-            - name: CLUSTER_NAME
-              value: dev
-            - name: HOST_IP
-              valueFrom:
-                fieldRef:
-                  fieldPath: status.hostIP
-          resources:
-            limits:
-              cpu: 1000m
-              memory: 2048Mi
-            requests:
-              cpu: 500m
-              memory: 1024Mi
-          volumeMounts:
-            - mountPath: /app/configmap
-              name: testcase-project-configmap
+        #        - envFrom:
+        #            - secretRef:
+        #                name: core-fastapi_demo-secrets
+        image: 192.168.3.7:8081/fastapi_demo/app:latest
+        imagePullPolicy: Always
+        livenessProbe:
+          exec:
+            command:
+              - /bin/healthcheck
+              - --server_name
+              - "fastapi_demo"
+              - --server_address
+              - "0.0.0.0:8080"
+          failureThreshold: 3
+          initialDelaySeconds: 5
+          periodSeconds: 10
+          successThreshold: 1
+          timeoutSeconds: 1
+        ports:
+          - containerPort: 9102
+            protocol: TCP
+        name: fastapi_demo
+        env:
+          - name: ENV
+            value: dev
+          - name: CLUSTER_NAME
+            value: dev
+          - name: HOST_IP
+            valueFrom:
+              fieldRef:
+                fieldPath: status.hostIP
+          - name: APP.CONFIG_PATH
+            value: /app/configmap/config.yaml
+
+        resources:
+          limits:
+            cpu: 1000m
+            memory: 2048Mi
+          requests:
+            cpu: 500m
+            memory: 1024Mi
+        volumeMounts:
+          - mountPath: /app/configmap
+            name: fastapi_demo-configmap
       volumes:
         - configMap:
-            name: testcase-project-configmap
-          name: testcase-project-configmap
+            name: fastapi_demo-configmap
+          name: fastapi_demo-configmap
