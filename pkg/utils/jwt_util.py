@@ -6,7 +6,7 @@ import uuid
 import jwt
 
 headers = {'alg': "HS256"}
-
+# TODO TO CONFIG
 securt_key = "whoisyourdaddy"
 
 

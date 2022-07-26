@@ -1,4 +1,5 @@
 import pika
+from loguru import logger
 
 
 def callback(ch: pika.adapters.blocking_connection.BlockingChannel, method, properties, body):

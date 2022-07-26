@@ -137,6 +137,7 @@ class RabbitMQClient:
         user_info = pika.PlainCredentials(username=conf.username, password=conf.password)
         conn = pika.BlockingConnection(
             pika.ConnectionParameters(host=conf.host, port=conf.port, virtual_host="/", credentials=user_info,
+                                      retry_delay=3,
                                       heartbeat=0)
         )
         return conn

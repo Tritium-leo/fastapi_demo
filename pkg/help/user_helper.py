@@ -1,16 +1,27 @@
 from typing import *
 
+import starlette.responses
+
 import pkg.dao.user as dao_user
 from pkg import constant
 from pkg.codes.code import *
 from pkg.dao import redis
 from pkg.model.user import User
+from pkg.utils.jwt_util import get_token
 
 
 class UserHelper:
+    @staticmethod
+    def set_token(payload, response: starlette.responses.Response) -> starlette.responses.Response:
+        token = get_token(payload, px=constant.user.UserTokenDuration)
+        refresh_token = get_token(payload, px=constant.user.UserTokenDuration * 2)
 
-    @classmethod
-    def fetch_users(cls, user_ids: List[int]) -> List[User]:
+        response.set_cookie("X-TOKEN", token)
+        response.set_cookie("X-TOKEN-REFRESH", refresh_token)
+        return response
+
+    @staticmethod
+    def fetch_users(user_ids: List[int]) -> List[User]:
         if len(user_ids) > constant.user.UserQueryBatchMax:
             raise Exception(REQUEST_ERROR)
         users = redis.client.hmget(constant.user.UserRedisInfoCacheKey, *user_ids)
@@ -28,8 +39,8 @@ class UserHelper:
         redis.client.hmset(constant.user.UserRedisInfoCacheKey, update_data)
         return users
 
-    @classmethod
-    def fetch_user(cls, user_id: int) -> Union[User, None]:
+    @staticmethod
+    def fetch_user(user_id: int) -> Union[User, None]:
         u = redis.client.hget(constant.user.UserRedisInfoCacheKey, user_id)
         if u is not None:
             return u
@@ -40,8 +51,8 @@ class UserHelper:
         redis.client.hset(constant.user.UserRedisInfoCacheKey, user.uuid, user.to_dict())
         return user
 
-    @classmethod
-    def fetch_user_by_name(cls, username: str) -> Union[User, None]:
+    @staticmethod
+    def fetch_user_by_name(username: str) -> Union[User, None]:
         # illegal value filter
         if not User.check_username(username):
             return None

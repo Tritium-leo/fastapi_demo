@@ -12,7 +12,6 @@ from pkg.mq import rabbitmq
 from pkg.response import JsonResponse
 from pkg.routers.router import v1
 from pkg.schemas.user import *
-from pkg.utils.jwt_util import get_token
 
 
 @v1.post("/login", response_model=LoginResponse)
@@ -28,17 +27,10 @@ def login(info: RequestLogin):
         return LoginResponse(code=codes.REQUEST_PARAM_ERROR)
     if check_pwd and u.is_normal():
         payload = {"username": u.username, "uuid": u.uuid}
-        token = get_token(payload, px=constant.user.UserTokenDuration)
-        refresh_token = get_token(payload, px=constant.user.UserTokenDuration * 2)
 
         redis.client.delete(today_wrong_key)
-        # token_duration = constant.user.UserTokenLongDuration if info.keep_login else constant.user.UserTokenDuration
-        # redis.client.set(token, uuid, px=token_duration)
-        # redis.client.set(refresh_token, uuid, px=token_duration) if not info.keep_login else None
-
-        response = JsonResponse(LoginResponse(data=u.to_dict()).dict())
-        response.set_cookie("X-TOKEN", token)
-        response.set_cookie("X-TOKEN-REFRESH", refresh_token)
+        response = JsonResponse()
+        response = UserHelper.set_token(payload, response)
         return response
     else:
         redis.client.incr(f"{u.uuid}|{datetime.date.today()}")

@@ -3,28 +3,33 @@ from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from pkg import codes
-from pkg.utils.jwt_util import check_payload
+from pkg.help.user_helper import UserHelper
+from pkg.utils.jwt_util import check_token
 
 
-class SSOMiddleware(BaseHTTPMiddleware):
+class JWTMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        # response = await call_next(request)
-        # response.headers['Custom'] = 'Example'
         url = request.url
+
         token = Request.cookies.getter("X-TOKEN")
         refresh_token = Request.cookies.getter("X-TOKEN-REFRESH")
         have_token = False
+        token_time_out = False
         user_base_info = None
-        if token and check_payload(token):
+        if token and check_token(token):
             have_token = True
-            user_base_info = check_payload(token)
-        elif refresh_token and check_payload(refresh_token):
+            user_base_info = check_token(token)
+        elif refresh_token and check_token(refresh_token):
             have_token = True
-            user_base_info = check_payload(token)
+            token_time_out = True
+            user_base_info = check_token(token)
 
         if have_token:
             uuid, username = user_base_info["uuid"], user_base_info["username"]
-            return await call_next(request)
+            response = await call_next(request)
+            if token_time_out:
+                response = UserHelper.set_token(user_base_info, response)
+            return user_base_info
         elif any([x in url for x in ['/login', '/register', '/verification_code']]):
             return await call_next(request)
         return JSONResponse({"code": codes.Unauthorized, "msg": "your must login to view this page"})

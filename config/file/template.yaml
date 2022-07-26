@@ -1,0 +1,84 @@
+rabbitmq:
+  host: 0.0.0.0
+  port: 5672
+  username: guest
+  password: guest
+  #TODO 健康监测 若QUEUE内容过多。启动更多消费者去消费
+# mq
+# https://www.cnblogs.com/hls91/p/15309641.html
+# 简单1对一模式 or Work模式
+# mq producer consumer
+user-service-producer:
+  queueName: social
+  durable: true
+
+  # TODO
+  failed_retry: 3 # 失败重试次数
+  failed: # 失败后处理方法 mysql ? redis ? innodb? failed？
+
+
+user-service-consumer-1:
+  queueName: social
+  queueDurable: true # 消息持久化
+  autoAck: false # 自动确认
+  prefetch: 1
+
+  # TODO
+  failed_retry: 3 # 失败重试次数
+  failed: # 失败后处理方法 mysql ? redis ? innodb? failed？ re_push_to_origin? re_push_to_failed_queue? drop?
+
+user-service-consumer-2:
+  queueName: social
+  queueDurable: true # 消息持久化
+  autoAck: false # 自动确认
+  prefetch: 1
+
+# topic 模式(发布订阅模式)
+# mq producer consumer
+user-service-producer2:
+  exchangeName: testproject.service2
+  durable: true
+  kind: fanout
+user-service-consumer2:
+  exchangeName: testproject.service2
+  queueName: social
+  queueDurable: true # 消息持久化
+  exchangeDurable: true # 消息持久化
+  kind: fanout # 模式 fanout 广播 redict 定向
+  parallel: 4
+  autoAck: false # 自动确认
+  prefetch: 1 # 每次消费消息条数
+
+# 关键字模式 direct
+user-service-producer3:
+  exchangeName: testproject.service3
+  durable: true
+  kind: fanout
+  routing_keys:
+    - social
+    - user
+user-service-consumer3-1:
+  exchangeName: testproject.service3
+  queueName: testproject.service3-social
+  routing_key: social # 关键字匹配
+  queueDurable: true # 消息持久化
+  exchangeDurable: true # 消息持久化
+  kind: direct # 模式 fanout 广播 redict 定向
+  parallel: 4
+  autoAck: false # 自动确认
+  prefetch: 1 # 每次消费消息条数
+
+user-service-consumer3-2:
+  exchangeName: testproject.service3
+  queueName: testproject.service3-user
+  routing_key: user# 关键字匹配
+  queueDurable: true # 消息持久化
+  exchangeDurable: true # 消息持久化
+  kind: direct # 模式 fanout 广播 redict 定向
+  parallel: 4
+  autoAck: false # 自动确认
+  prefetch: 1 # 每次消费消息条数
+
+# 模糊匹配模式 topic 类似 direct  routing_key 可以采用通配服
+
+# RPC模式
