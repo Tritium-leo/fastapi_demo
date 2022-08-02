@@ -1,4 +1,5 @@
 import snowflake.client as snow_cli
+from loguru import logger
 
 prev = 0
 autoincr = 1
@@ -17,8 +18,8 @@ def get_snow_id():
             while new_id <= prev + autoincr:
                 new_id = snow_cli.get_guid()
             autoincr = 1
-    except:
-        logger.info("ERROR ! SNOW FLAKE SERVER DEAD")
+    except Exception as e:
+        logger.error("ERROR ! SNOW FLAKE SERVER DEAD")
         new_id = prev + autoincr
         autoincr += 1
     return new_id

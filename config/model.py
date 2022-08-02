@@ -30,13 +30,14 @@ class Config(BaseModel):
                 elif file_type == "yaml":
                     Config.deep_update_dict(config.data, yaml.load(f, yaml.FullLoader))
         # 读取环境变量
-        # 解析格式 = APP.PORT  8000   DB.DB_TYPE APP.SSO_CENTER
+        # 解析格式 = APP__PORT  8000   DB__DB_TYPE APP.SSO_CENTER
+        sp_ch = "__"
         for k, v in os.environ.items():
-            if "." not in k:
+            if sp_ch not in k:
                 continue
             add_config = defaultdict(dict)
             prev_k = None
-            for _k in k.split(".")[::-1]:
+            for _k in k.split(sp_ch)[::-1]:
                 _k = _k.lower()
                 add_config[_k] = v
                 v = add_config

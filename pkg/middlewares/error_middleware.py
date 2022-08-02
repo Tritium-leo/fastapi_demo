@@ -11,10 +11,17 @@ class ErrorMiddleware(BaseHTTPMiddleware):
         try:
             response = await call_next(request)
         except Exception as e:
-            # TODO LOGGER request.body
-            logger.exception(
-                f"Method:[{request.method}] Url:[{request.url}] Param:{request.path_params if request.path_params else request.query_params} ")
+            logger.error(
+                f"Method:[{request.method}] Url:[{request.url}] \n" +
+                f"Header:{request.headers} \n" +
+                f"PathParam:{request.path_params} \n" +
+                f"QueryParams:{request.query_params} \n" +
+                # f"Json:{await request.json()} \n" +
+                # f"Body:{await request.body()} \n" +
+                f"ERROR:{e}"
+            )
             logger.exception(e)
             return JSONResponse({"code": codes.INTERNAL_SERVICE_ERROR, "msg": str(e)})
         else:
+
             return response

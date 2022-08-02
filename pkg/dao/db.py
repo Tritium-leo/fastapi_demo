@@ -1,15 +1,17 @@
-import enum
 from contextlib import contextmanager
+from enum import unique, Enum
 
 import sqlalchemy
 from loguru import logger
 from pydantic import BaseModel
+from sqlalchemy.orm import close_all_sessions
 from sqlalchemy.orm import sessionmaker
 
 from pkg.errors import sql_error
 
 
-class DBType(enum.Enum):
+@unique
+class DBType(Enum):
     mysql = "mysql"
     postgres = "postgres"
     oracle = "oracle"
@@ -71,3 +73,11 @@ def session_scope() -> sqlalchemy.orm.Session:
         raise sql_error.SqlException(e)
     finally:
         session.close()
+
+
+def close():
+    try:
+        close_all_sessions()
+        logger.info("DB closed Successfully")
+    except Exception as e:
+        logger.error(f"DB closed Failed,err:{e}")

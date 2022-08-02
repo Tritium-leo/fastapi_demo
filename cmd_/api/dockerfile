@@ -1,0 +1,9 @@
+FROM reg.personal.com:8050/fastapi_demo/builder
+
+COPY . /app
+
+RUN cd /app && pip install -r ./requirements.txt
+
+WORKDIR /app
+
+CMD ["gunicorn","main:app","-c","config/gunicorn_config.py"]

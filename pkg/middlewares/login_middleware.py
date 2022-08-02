@@ -1,4 +1,3 @@
-from fastapi import Request
 from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -9,10 +8,10 @@ from pkg.utils.jwt_util import check_token
 
 class JWTMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        url = request.url
+        url = str(request.url)
+        token = request.cookies.get("X-TOKEN")
+        refresh_token = request.cookies.get("X-TOKEN-REFRESH")
 
-        token = Request.cookies.getter("X-TOKEN")
-        refresh_token = Request.cookies.getter("X-TOKEN-REFRESH")
         have_token = False
         token_time_out = False
         user_base_info = None

@@ -5,9 +5,11 @@ from fastapi import Request
 import pkg.dao.user as dao_user
 from pkg import codes
 from pkg import constant
+from pkg.celery.user_tasks.tasks import send_email
 from pkg.codes import code
 from pkg.dao import redis
 from pkg.help.user_helper import UserHelper
+from pkg.model.user import User
 from pkg.mq import rabbitmq
 from pkg.response import JsonResponse
 from pkg.routers.router import v1
@@ -27,13 +29,14 @@ def login(info: RequestLogin):
         return LoginResponse(code=codes.REQUEST_PARAM_ERROR)
     if check_pwd and u.is_normal():
         payload = {"username": u.username, "uuid": u.uuid}
-
-        redis.client.delete(today_wrong_key)
+        with redis.client.get_cli() as cli:
+            cli.delete(today_wrong_key)
         response = JsonResponse()
         response = UserHelper.set_token(payload, response)
         return response
     else:
-        redis.client.incr(f"{u.uuid}|{datetime.date.today()}")
+        with redis.client.get_cli() as cli:
+            cli.incr(f"{u.uuid}|{datetime.date.today()}")
         return LoginResponse(code=codes.REQUEST_PARAM_ERROR).dict()
 
 
@@ -48,6 +51,8 @@ def logout():
 @v1.post("/register", response_model=BoolResponse)
 def register(info: RequestRegister):
     res = False
+    if not User.check_username(info.username):
+        return BoolResponse(code=code.REQUEST_PARAM_ERROR, data=res, msg="USERNAME INVALID").dict()
     u = UserHelper.fetch_user_by_name(info.username)
     if u is not None:
         return BoolResponse(code=code.REQUEST_PARAM_ERROR, data=res).dict()
@@ -65,5 +70,8 @@ def user_cancel(info: RequestUserCancel):
 
 @v1.get("/verification_code", response_model=BoolResponse)
 def verification_code(info: RequestVerificationCode):
+    # test rabbitmq
     rabbitmq.client.publish_msg("user-service-producer", "", info.json())
+    # test celery
+    send_email.apply_async(args=[info.email, ])
     return BoolResponse(data=True).dict()

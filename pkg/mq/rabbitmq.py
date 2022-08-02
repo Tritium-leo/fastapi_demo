@@ -1,7 +1,8 @@
+import multiprocessing
 import threading
-import time
 from typing import *
 
+import loguru
 import pika
 from pika.exchange_type import ExchangeType
 from pydantic import BaseModel
@@ -14,16 +15,23 @@ local = threading.local()
 
 class MQConsumerThread(threading.Thread):
     def __init__(self, threadId, name, delay):
-        threading.Thread.__init__(self)
+        threading.Thread.__init__(self, name=name, daemon=True)
         self.threadId = threadId
-        self.name = name
         self.delay = delay
 
     def run(self):
-        while True:
-            self.delay.start()
-            time.sleep(10)
-        logger.info("exit xiancheng")
+        # while True:
+        self.delay.start()
+
+
+class MQConsumerProcess(multiprocessing.Process):
+    def __init__(self, processId, name, delay):
+        multiprocessing.Process.__init__(self, name=name, daemon=True)
+        self.delay = delay
+
+    def run(self):
+        # while True:
+        self.delay.start()
 
 
 class RabbitMQConfig(BaseModel):
@@ -48,12 +56,11 @@ class RabbitMqProducer:
     ch: pika.adapters.blocking_connection.BlockingChannel
     conf: RabbitMQProducerConfig
 
-    def __init__(self, conn: pika.BlockingConnection,
+    def __init__(self,
                  ch: pika.adapters.blocking_connection.BlockingChannel,
                  config_name: str,
                  conf: RabbitMQProducerConfig,
                  ):
-        self._conn_ = conn
         self.config_name = config_name
         self.ch = ch
         self.conf = conf
@@ -75,8 +82,8 @@ class RabbitMqProducer:
         return
 
     def close(self):
-        if self._conn_.is_open:
-            self._conn_.close()
+        if self.ch.is_open:
+            self.ch.close()
 
 
 class RabbitMQConsumerConfig(BaseModel):
@@ -93,44 +100,39 @@ class RabbitMQConsumerConfig(BaseModel):
 
 
 class RabbitMQConsumer:
-    _conn_: pika.BlockingConnection
     config_name: str
     ch: pika.adapters.blocking_connection.BlockingChannel
     conf: RabbitMQConsumerConfig
 
-    def __init__(self, conn: pika.BlockingConnection, ch: pika.adapters.blocking_connection.BlockingChannel,
-                 config_name: str, conf, callback):
-        self._conn_ = conn
+    def __init__(self, ch: pika.adapters.blocking_connection.BlockingChannel,
+                 config_name: str, conf):
         self.ch = ch
         self.config_name = config_name
-        self.callback = callback
         self.conf = conf
 
     def start(self):
-        try:
-            self.ch.start_consuming()
-        except KeyboardInterrupt:
-            self.ch.stop_consuming()
+        self.ch.start_consuming()
 
-    def close(self, consumer_tag: str):
+    def close(self):
         if self.ch.is_open:
-            # self.ch.stop_consuming(consumer_tag=consumer_tag)
-            self.ch.close() if self.ch.is_open else None
-        if self._conn_.is_open:
-            self._conn_.close()
+            self.ch.close()
 
 
 class RabbitMQClient:
-    conn: pika.BlockingConnection
+    producer_conn: pika.BlockingConnection
+    consumer_conn: pika.BlockingConnection
     producers: Dict[str, RabbitMqProducer]
     consumers: Dict[str, RabbitMQConsumer]
     conf: RabbitMQConfig
-    _treads = []
+    _treads: List[MQConsumerThread] = []
+    _mutil_process: List[MQConsumerProcess] = []
 
     def __init__(self, conf: RabbitMQConfig):
         self.conf = conf
         self.producers = {}
         self.consumers = {}
+        self.producer_conn = self.get_conn()
+        self.consumer_conn = self.get_conn()
 
     def get_conn(self):
         conf = self.conf
@@ -152,7 +154,7 @@ class RabbitMQClient:
         if conf.exchangeName != "" and conf.kind == "":
             raise Exception(f"load amqp producer {config_name} configuration fail, kind is empty")
 
-        conn = self.get_conn()
+        conn = self.producer_conn
         ch = conn.channel()
         if conf.queueName is not None and conf.queueName != "":
             ch.queue_declare(queue=conf.queueName,
@@ -173,7 +175,7 @@ class RabbitMQClient:
                 exchange_type=exchange)
         else:
             raise Exception(f"Rabbitmq quene name or exchange name is not config。{config_name}")
-        self.producers[config_name] = RabbitMqProducer(conn, ch, config_name, conf)
+        self.producers[config_name] = RabbitMqProducer(ch, config_name, conf)
 
     def publish_msg(self, producer: str, headers, body):
         if producer not in self.producers:
@@ -185,7 +187,9 @@ class RabbitMQClient:
             raise Exception(f"Consumer quene already exists: name:{config_name}")
         if config_name not in config_model.config.data:
             raise Exception(f"This Consumer Quene Config didn't exist :{config_name}")
-        conn = self.get_conn()
+
+        conn = self.consumer_conn
+
         conf = config_model.config.struct_map(config_name, RabbitMQConsumerConfig)
 
         ch = conn.channel()
@@ -226,16 +230,28 @@ class RabbitMQClient:
                                         arguments={}
                                         )
 
-        self.consumers[consumer_tag] = RabbitMQConsumer(conn, ch, config_name, conf, callback)
+        self.consumers[consumer_tag] = RabbitMQConsumer(ch, config_name, conf)
 
     def close(self):
         # close thread
-        for t in self._treads:
-            stop_thread(t)
-        for consumer_tag, v in self.consumers.items():
-            v.close(consumer_tag)
-        for _, v in self.producers.items():
-            v.close()
+        try:
+            for t in self._treads:
+                stop_thread(t)
+            for p in self._mutil_process:
+                p.kill()
+            # close consumer channel
+            for consumer_tag, v in self.consumers.items():
+                v.close()
+            # close producer channel
+            for _, v in self.producers.items():
+                v.close()
+            # close conn
+            self.consumer_conn.close() if self.consumer_conn.is_open else None
+            self.producer_conn.close() if self.producer_conn.is_open else None
+        except Exception as e:
+            loguru.logger.error(f"RabbitMq Closed Failed,ERR:{e}")
+        else:
+            loguru.logger.info("RabbitMQ Closed Successfully")
 
     def start(self):
         idx = 0

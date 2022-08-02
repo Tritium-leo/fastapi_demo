@@ -1,5 +1,6 @@
 import enum
 import os
+import sys
 import time
 
 import snowflake.client
@@ -10,8 +11,8 @@ from loguru import logger
 from pydantic import BaseModel
 
 from config import model as config_model
+from pkg import middlewares
 from pkg.dao import redis, db
-from pkg.middlewares import ErrorMiddleware
 from pkg.mq import consumers
 from pkg.mq import rabbitmq
 from pkg.routers import router
@@ -19,18 +20,28 @@ from root import PROJECT_ROOT_PATH
 
 # logger
 logger.remove(handler_id=None)
-logger.add(
+trace = logger.add(
+    # f"{PROJECT_ROOT_PATH}/log/fastapi_demo_{str(int(time.time()))}.log",
     f"{PROJECT_ROOT_PATH}/log/fastapi_demo_{str(int(time.time()))[:-5] + '0' * 5}.log",
     colorize=False,
-    format="<green>{time:HH:mm:ss}</green> | {level} | <level>{message}</level>",
+    format="<green>{time}</green> | {level} | <level>{message}</level>",
     rotation="1 day",
     retention="10 days",
     compression="zip",
     catch=True,
-    enqueue=True
+    enqueue=True,
+    backtrace=True,
+    diagnose=True
 )
+# console
+logger.add(sys.stdout,
+           colorize=True,
+           format="<green>{time}</green> | {level} | <level>{message}</level>",
+           enqueue=True,
+           )
 
 
+@enum.unique
 class EnvEnum(enum.Enum):
     Dev = 'dev'
     Prev = 'prev'
@@ -45,6 +56,7 @@ class AppConfig(BaseModel):
     # 分布式id
     snowflake_host: str
     snowflake_port: int
+    log_dir: str
 
     def is_dev(self) -> bool:
         return self.env == EnvEnum.Dev.value
@@ -58,7 +70,7 @@ class AppConfig(BaseModel):
 
 def init_app():
     config = config_model.Config.load_dir(f"{PROJECT_ROOT_PATH}/config/file/default.yaml",
-                                          os.environ.get("APP.CONFIG_PATH",
+                                          os.environ.get("APP__CONFIG_PATH",
                                                          f"{PROJECT_ROOT_PATH}/config/file/local.yaml"))
     app_conf = config.struct_map('app', AppConfig)
     # connect to snowflake server
@@ -72,12 +84,13 @@ def init_app():
     rabbitmq.init_rabbitmq(config.struct_map("rabbitmq", rabbitmq.RabbitMQConfig))
     # producer
     rabbitmq.client.new_producer("user-service-producer")
-    # mq init consumer
+    # mq init consumer and start
     consumers.init()
     rabbitmq.client.start()
 
     # -------app ---
     # docs show?
+    app = None
     if app_conf.is_dev():
         app = FastAPI(title="fast_api_demo", version=app_conf.version, debug=True)
     else:
@@ -86,6 +99,10 @@ def init_app():
     app.include_router(router.v2)
     # logger
     # registry middleware
+
+    app.add_middleware(middlewares.JWTMiddleware)
+    app.add_middleware(middlewares.ErrorMiddleware)
+    app.add_middleware(middlewares.TraceMiddleware)
     # 关闭跨域限制
     app.add_middleware(
         CORSMiddleware,
@@ -94,36 +111,31 @@ def init_app():
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.add_middleware(ErrorMiddleware)
     return app
 
 
-app = init_app()
+api = init_app()
 
 
-@app.on_event("startup")
+@api.on_event("startup")
 def start_event():
     logger.info("data hot load")
 
 
-@app.on_event("shutdown")
+@api.on_event("shutdown")
 def shut_down_event():
-    logger.info("before close app")
-
     # db close
-    # from pkg.dao.mysql import Session
-    # Session.close_all()
+    db.close()
 
     # redis close
     redis.client.close()
-    logger.info("redis closed")
 
     # mq close
     rabbitmq.client.close()
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="localhost", port=8070)
+    uvicorn.run(api, host="localhost", port=8080)
 
 # else:
 #     gunicorn_logger = logging.getLogger("gunicorn.error")

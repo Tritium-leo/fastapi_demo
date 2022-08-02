@@ -41,14 +41,16 @@ class UserHelper:
 
     @staticmethod
     def fetch_user(user_id: int) -> Union[User, None]:
-        u = redis.client.hget(constant.user.UserRedisInfoCacheKey, user_id)
-        if u is not None:
-            return u
+        with redis.client.get_cli() as cli:
+            u = cli.hget(constant.user.UserRedisInfoCacheKey, str(user_id))
+            if u is not None:
+                return u
         user = dao_user.fetch_user(user_id=user_id)
         if user is None:
             return
-        redis.client.hset(constant.user.UserRedisInfoCacheKey, user.username, user.to_dict())
-        redis.client.hset(constant.user.UserRedisInfoCacheKey, user.uuid, user.to_dict())
+        with redis.client.get_cli() as cli:
+            cli.hset(constant.user.UserRedisInfoCacheKey, user.username, user.to_dict())
+            cli.hset(constant.user.UserRedisInfoCacheKey, user.uuid, user.to_dict())
         return user
 
     @staticmethod
@@ -56,9 +58,11 @@ class UserHelper:
         # illegal value filter
         if not User.check_username(username):
             return None
-        u = redis.client.hget(constant.user.UserRedisInfoCacheKey, username)
-        if u is not None:
-            return User(**u)
+        with redis.client.get_cli() as cli:
+            u = cli.hget(constant.user.UserRedisInfoCacheKey, username)
+            u = redis.client.try_parse_dict(u)
+            if u is not None:
+                return User(**u)
         user = dao_user.fetch_user(username=username)
         if user is None:
             return

@@ -3,6 +3,7 @@ app:
   version: v1
   machine_id: local
   sso_center: https://xxxx/
+  log_dir: ./run/api/
 
 db:
   max_idle_conn: 10

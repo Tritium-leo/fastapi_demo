@@ -1,0 +1,9 @@
+FROM reg.personal.com:8050/fastapi_demo/builder
+
+COPY . /app
+
+RUN cd /app && pip install -r ./requirements.txt
+
+WORKDIR /app
+
+CMD ["celery","-A", "cmd_.celery.main","worker","--loglevel=info"]

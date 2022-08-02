@@ -1,4 +1,4 @@
-DOCKER_REGISTRY:=192.168.3.7:8081/fastapi_demo
+DOCKER_REGISTRY:=reg.personal.com:8050/fastapi_demo
 
 .PHONY:init
 init:
@@ -7,8 +7,8 @@ init:
 
 .PHONY:run
 run:
-	gunicorn main:app -c config/config.py
-
+	gunicorn main:app -c config/gunicorn_config.py
+# sadddsas
 .PHONY:build
 build\:base:
 	pip freeze> requirements.txt
@@ -29,7 +29,7 @@ build\:all:
 
 .PHONY:docker\:run
 docker\:run:
-	sudo docker run -d --name fastapi_demo -p 8005:8080 --restart=always ${DOCKER_REGISTRY}/app
+	sudo docker run -itd --name fastapi_demo -p 8005:8080 --restart=always ${DOCKER_REGISTRY}/app
 
 .PHONY:create\:sql
 create\:sql:
@@ -38,3 +38,13 @@ create\:sql:
 .PHONY:test
 test:
 	 export PYTHONPATH=$PYTHONPATH:`pwd` && python ./testcase/run_test.py
+
+.PHONY:apply\:kind
+apply\:kind:
+	kubectl config use-context kind-kind
+	kubectl apply -f ./deployments/test_deplyment.yaml
+
+.PHONY:run\:celery
+run\:celery:
+	celery -A cmd_.celery.main worker --loglevel=info
+	#celery beat -A cmd_.celery.main --loglevel=info

@@ -1,83 +1,86 @@
 apiVersion: v1
 kind: ConfigMap
 metadata:
-  name: fastapi_demo-configmap
+  name: fastapi-demo-configmap
   namespace: core
 data:
   config.yaml: |
     config:
       env: "DEV"
     db:
-      host: 192.168.3.7
-      database: fastapi_demo_canary
+      host: 192.168.10.138 
+      database: fastapi-demo_canary
     redis：
-      host: 192.168.3.7
+      host: 192.168.10.138 
     rabbitmq:
-      host: 192.168.3.7
+      host: 192.168.10.138 
 ---
-apiVersion: extensions/v1beta1
+apiVersion: apps/v1
 kind: Deployment
 metadata:
   labels:
-    app: fastapi_demo-project
-  name: fastapi_demo-project
+    app: fastapi-demo-project
+  name: fastapi-demo-project
   namespace: core
 spec:
   replicas: 1
+  selector:
+    matchLabels:
+      app: fastapi-demo-project
   template:
     metadata:
       labels:
-        app: fastapi_demo
+        app: fastapi-demo-project
       annotations:
         prometheus.io/scrape: "true"
         prometheus.io/port: "9102"
     spec:
       containers:
-        #        - envFrom:
-        #            - secretRef:
-        #                name: core-fastapi_demo-secrets
-        image: 192.168.3.7:8081/fastapi_demo/app:latest
-        imagePullPolicy: Always
-        livenessProbe:
-          exec:
-            command:
-              - /bin/healthcheck
-              - --server_name
-              - "fastapi_demo"
-              - --server_address
-              - "0.0.0.0:8080"
-          failureThreshold: 3
-          initialDelaySeconds: 5
-          periodSeconds: 10
-          successThreshold: 1
-          timeoutSeconds: 1
-        ports:
-          - containerPort: 9102
-            protocol: TCP
-        name: fastapi_demo
-        env:
-          - name: ENV
-            value: dev
-          - name: CLUSTER_NAME
-            value: dev
-          - name: HOST_IP
-            valueFrom:
-              fieldRef:
-                fieldPath: status.hostIP
-          - name: APP.CONFIG_PATH
-            value: /app/configmap/config.yaml
+#                - envFrom:
+#                    - secretRef:
+#                        name: core-fastapi-demo-secrets
+        - image: 192.168.10.138:8050/fastapi-demo/app:latest
+          imagePullPolicy: Always
+          livenessProbe:
+            exec:
+              command:
+                - /bin/healthcheck
+                - --server_name
+                - "fastapi-demo"
+                - --server_address
+                - "0.0.0.0:8080"
+            failureThreshold: 3
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            successThreshold: 1
+            timeoutSeconds: 1
+          ports:
+            - containerPort: 9102
+              protocol: TCP
+          name: fastapi-demo
+          env:
+            - name: ENV
+              value: dev
+            - name: CLUSTER_NAME
+              value: dev
+            - name: HOST_IP
+              valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+            - name: APP.CONFIG_PATH
+              value: /app/configmap/config.yaml
 
-        resources:
-          limits:
-            cpu: 1000m
-            memory: 2048Mi
-          requests:
-            cpu: 500m
-            memory: 1024Mi
-        volumeMounts:
-          - mountPath: /app/configmap
-            name: fastapi_demo-configmap
+          resources:
+            limits:
+              cpu: 1000m
+              memory: 2048Mi
+            requests:
+              cpu: 500m
+              memory: 1024Mi
+          volumeMounts:
+            - mountPath: /app/configmap
+              name: fastapi-demo-configmap
       volumes:
-        - configMap:
-            name: fastapi_demo-configmap
-          name: fastapi_demo-configmap
+          - configMap:
+              name: fastapi-demo-configmap
+            name: fastapi-demo-configmap
